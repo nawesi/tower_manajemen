@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\InstallationRequest;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\InstallationStatusMail;
 
 class InstallationReviewController extends Controller
 {
@@ -12,7 +14,7 @@ class InstallationReviewController extends Controller
     {
         $status = $request->query('status'); // pending/approved/rejected/null
 
-        $q = InstallationRequest::with('tower')->latest();
+        $q = InstallationRequest::with(['tower', 'user'])->latest();
 
         if (in_array($status, ['pending', 'approved', 'rejected'], true)) {
             $q->where('status', $status);
@@ -30,15 +32,32 @@ class InstallationReviewController extends Controller
             'admin_comment' => ['nullable', 'string', 'max:2000'],
         ]);
 
+        $oldStatus = $installation->status;
+
         $installation->update([
             'status' => $data['status'],
             'admin_comment' => $data['admin_comment'] ?? null,
             'reviewed_at' => now(),
         ]);
 
+        // Kirim email hanya jika status berubah
+        if ($oldStatus !== $installation->status) {
+            $installation->loadMissing(['user', 'tower']);
+
+            $recipient = $installation->user?->email;
+
+            if (!empty($recipient)) {
+                try {
+                    Mail::to($recipient)->send(new InstallationStatusMail($installation));
+                } catch (\Throwable $e) {
+                    // jangan menggagalkan proses approve/reject hanya karena email gagal
+                    // (opsional) kamu bisa log error di sini
+                }
+            }
+        }
+
         return back()->with('success', 'Status pengajuan berhasil diupdate.');
     }
-
 
     public function export(Request $request)
     {
@@ -46,22 +65,18 @@ class InstallationReviewController extends Controller
 
         $query = InstallationRequest::with('tower')->latest();
 
-        // Samakan rule filter dengan halaman index (aman dari status aneh/typo)
         if (in_array($status, ['pending', 'approved', 'rejected'], true)) {
             $query->where('status', $status);
         } else {
-            $status = null; // biar nama file konsisten "semua"
+            $status = null;
         }
 
         $filename = 'pengajuan_pemasangan_' . ($status ?? 'semua') . '_' . now()->format('Ymd_His') . '.csv';
 
         return response()->streamDownload(function () use ($query) {
             $out = fopen('php://output', 'w');
-
-            // BOM supaya Excel Windows kebaca UTF-8
             fwrite($out, "\xEF\xBB\xBF");
 
-            // Header kolom
             fputcsv($out, [
                 'Tanggal Pengajuan',
                 'Tower',
@@ -74,7 +89,6 @@ class InstallationReviewController extends Controller
                 'Link Foto',
             ]);
 
-            // Chunk biar hemat memory
             $query->chunk(500, function ($rows) use ($out) {
                 foreach ($rows as $r) {
                     $photoUrl = $r->device_photo_path ? asset('storage/' . $r->device_photo_path) : '';

@@ -180,13 +180,18 @@
         <a href="{{ route('devices.index') }}" class="btn btn-gradient py-2">
           Lihat list Perangkat
         </a>
+
         <a href="{{ route('admin.installations.index') }}" class="btn btn-gradient py-2">
           Riwayat Pengajuan
         </a>
 
           <a href="{{ route('admin.cables.index') }}" class="btn btn-gradient py-2">
-    List Jalur Kabel
-  </a>
+         List Jalur Kabel
+          </a>
+
+          <a href="{{ route('admin.users.index') }}" class="btn btn-gradient py-2">
+            User Kontrol Akses
+          </a>
       </div>
 
     </div>

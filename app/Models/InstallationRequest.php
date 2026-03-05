@@ -27,4 +27,10 @@ class InstallationRequest extends Model
     {
         return $this->belongsTo(Tower::class);
     }
+
+        public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
+
 }
