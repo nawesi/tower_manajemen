@@ -26,59 +26,67 @@ class InstallationReviewController extends Controller
         return view('admin.installations.index', compact('requests', 'status'));
     }
 
-    public function update(Request $request, InstallationRequest $installation)
-    {
-        $data = $request->validate([
-            'status' => ['required', 'in:approved,rejected'],
-            'admin_comment' => ['nullable', 'string', 'max:2000'],
-        ]);
+ public function update(Request $request, InstallationRequest $installation)
+{
+    $data = $request->validate([
+        'status' => ['required', 'in:approved,rejected'],
+        'admin_comment' => ['nullable', 'string', 'max:2000'],
+    ]);
 
-        $oldStatus = $installation->status;
+    // Marker log: memastikan method update kepanggil
+    Log::info('Installation update called', [
+        'installation_id' => $installation->id,
+        'incoming_status' => $data['status'],
+        'old_status' => $installation->status,
+        'user_id' => $installation->user_id,
+    ]);
 
-        $installation->update([
-            'status' => $data['status'],
-            'admin_comment' => $data['admin_comment'] ?? null,
-            'reviewed_at' => now(),
-        ]);
+    $oldStatus = $installation->status;
 
-        $emailInfo = null;
+    $installation->update([
+        'status' => $data['status'],
+        'admin_comment' => $data['admin_comment'] ?? null,
+        'reviewed_at' => now(),
+    ]);
 
-        // Kirim email hanya jika status berubah
-        if ($oldStatus !== $installation->status) {
-            $installation->loadMissing(['user', 'tower']);
+    $emailInfo = null;
 
-            $recipient = $installation->user?->email;
+    // Kirim email hanya jika status berubah
+    if ($oldStatus !== $installation->status) {
+        $installation->loadMissing(['user', 'tower']);
 
-            if (!empty($recipient)) {
-                try {
-                    Mail::to($recipient)->send(new InstallationStatusMail($installation));
+        $recipient = $installation->user?->email;
 
-                    Log::info('Email sent', [
-                        'to' => $recipient,
-                        'installation_id' => $installation->id,
-                        'status' => $installation->status,
-                    ]);
+        if (!empty($recipient)) {
+            try {
+                Mail::to($recipient)->send(new InstallationStatusMail($installation));
 
-                    $emailInfo = "Email terkirim ke {$recipient}.";
-                } catch (\Throwable $e) {
-                    Log::error('Email send failed', [
-                        'to' => $recipient,
-                        'installation_id' => $installation->id,
-                        'status' => $installation->status,
-                        'error' => $e->getMessage(),
-                    ]);
+                Log::info('Email sent', [
+                    'to' => $recipient,
+                    'installation_id' => $installation->id,
+                    'status' => $installation->status,
+                ]);
 
-                    $emailInfo = "Email gagal dikirim ke {$recipient} (cek log).";
-                }
-            } else {
-                $emailInfo = "Email vendor tidak ditemukan, jadi notifikasi tidak dikirim.";
+                $emailInfo = "Email terkirim ke {$recipient}.";
+            } catch (\Throwable $e) {
+                Log::error('Email send failed', [
+                    'to' => $recipient,
+                    'installation_id' => $installation->id,
+                    'status' => $installation->status,
+                    'error' => $e->getMessage(),
+                ]);
+
+                $emailInfo = "Email gagal dikirim ke {$recipient} (cek log).";
             }
         } else {
-            $emailInfo = "Status tidak berubah, email tidak dikirim.";
+            $emailInfo = "Email vendor tidak ditemukan, jadi notifikasi tidak dikirim.";
         }
-
-        return back()->with('success', 'Status pengajuan berhasil diupdate. ' . $emailInfo);
+    } else {
+        $emailInfo = "Status tidak berubah, email tidak dikirim.";
     }
+
+    return back()->with('success', 'Status pengajuan berhasil diupdate. ' . $emailInfo);
+}
 
     public function export(Request $request)
     {

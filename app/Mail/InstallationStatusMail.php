@@ -13,11 +13,12 @@ class InstallationStatusMail extends Mailable
 
     public function __construct(public InstallationRequest $req) {}
 
-    public function build()
-    {
-        $status = strtoupper($this->req->status);
+public function build()
+{
+    $status = strtoupper($this->req->status);
 
-        return $this->subject("Status Pengajuan Pemasangan: {$status}")
-            ->view('emails.installation-status');
-    }
+    return $this->from(config('mail.from.address'), config('mail.from.name'))
+        ->subject("Status Pengajuan Pemasangan: {$status}")
+        ->view('emails.installation-status');
+}
 }
