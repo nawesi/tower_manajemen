@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class StackItem extends Model
 {
-    protected $fillable = ['tower_id', 'stack_no', 'device_name'];
+    protected $fillable = ['tower_id', 'stack_no', 'device_name', 'photo_path'];
 
     public function tower()
     {

@@ -109,4 +109,10 @@ Route::prefix('admin')->middleware(['auth', 'role:admin'])->group(function () {
 
     Route::get('/users/export', [UserControlController::class, 'export'])
         ->name('admin.users.export');
+
+    Route::get('/devices/stack-items/{stackItem}', [TowerDeviceController::class, 'showStackItem'])
+    ->name('stack-items.show');
+
+    Route::post('/devices/stack-items/{stackItem}/photo', [TowerDeviceController::class, 'uploadStackItemPhoto'])
+    ->name('stack-items.photo.upload');
 });
