@@ -40,6 +40,7 @@ class InstallationRequestController extends Controller
         $data = $request->validate([
             'tower_id' => ['required', 'exists:towers,id'],
             'vendor_department' => ['required', 'string', 'max:255'],
+            'activity' => ['required', 'in:install_baru,dismantle,perbaikan'],
             'device_name' => ['required', 'string', 'max:255'],
             'stack_no' => ['required', 'integer', 'min:1', 'max:7'],
             'height_from_ground_m' => ['nullable', 'numeric', 'min:0', 'max:9999'],
@@ -56,6 +57,7 @@ class InstallationRequestController extends Controller
             'user_id' => Auth::id(), // penting: simpan siapa yang submit
             'tower_id' => $data['tower_id'],
             'vendor_department' => $data['vendor_department'],
+            'activity' => $data['activity'],
             'device_name' => $data['device_name'],
             'stack_no' => $data['stack_no'],
             'height_from_ground_m' => $data['height_from_ground_m'] ?? null,

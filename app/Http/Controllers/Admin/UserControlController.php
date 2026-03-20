@@ -111,7 +111,18 @@ class UserControlController extends Controller
             'account_status' => ['required', 'in:active,inactive'],
         ]);
 
-        $user->update(['account_status' => $data['account_status']]);
+        if ($data['account_status'] === 'active') {
+            // Saat aktifkan, kalau expiry sudah lewat, set ke NULL (atau set future)
+            $updates = ['account_status' => 'active'];
+
+            if ($user->access_expires_at && $user->access_expires_at->isPast()) {
+                $updates['access_expires_at'] = null; // atau now()->addDays(30)
+            }
+
+            $user->update($updates);
+        } else {
+            $user->update(['account_status' => 'inactive']);
+        }
 
         return back()->with('success', 'Status user berhasil diubah.');
     }

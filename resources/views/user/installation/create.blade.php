@@ -46,6 +46,15 @@
         @error('vendor_department') <div class="text-danger small mt-1">{{ $message }}</div> @enderror
       </div>
 
+      <div class="mb-2">
+      <label class="form-label">Kegiatan</label>
+      <select name="activity" class="form-select" required>
+        <option value="install_baru" {{ old('activity')==='install_baru' ? 'selected' : '' }}>Install Baru</option>
+        <option value="dismantle" {{ old('activity')==='dismantle' ? 'selected' : '' }}>Dismantle</option>
+        <option value="perbaikan" {{ old('activity')==='perbaikan' ? 'selected' : '' }}>Perbaikan</option>
+      </select>
+      </div>
+
       <div class="mb-3">
         <div class="label mb-1">NAMA PERANGKAT YANG DI PASANG</div>
         <input class="form-control" name="device_name" required>

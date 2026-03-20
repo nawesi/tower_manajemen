@@ -17,9 +17,8 @@
   @if(session('success'))
     <div class="alert alert-success">{{ session('success') }}</div>
   @endif
-  
 
-  <div class="d-flex gap-2 mb-3">
+  <div class="d-flex gap-2 mb-3 flex-wrap">
     <a class="btn btn-sm {{ $status===null ? 'btn-dark' : 'btn-outline-dark' }}"
        href="{{ route('admin.installations.index') }}">Semua</a>
 
@@ -31,11 +30,11 @@
 
     <a class="btn btn-sm {{ $status==='rejected' ? 'btn-danger' : 'btn-outline-danger' }}"
        href="{{ route('admin.installations.index', ['status'=>'rejected']) }}">Rejected</a>
-    <a class="btn btn-primary btn-sm ms-auto"
-   href="{{ route('admin.installations.export', array_filter(['status' => $status])) }}">
-  Export CSV
-</a>
 
+    <a class="btn btn-primary btn-sm ms-auto"
+       href="{{ route('admin.installations.export', array_filter(['status' => $status])) }}">
+      Export CSV
+    </a>
   </div>
 
   <div class="card">
@@ -46,6 +45,7 @@
           <th>Tanggal</th>
           <th>Tower</th>
           <th>Vendor/Dept</th>
+          <th>Kegiatan</th>
           <th>Perangkat</th>
           <th>Stack</th>
           <th>Foto</th>
@@ -59,8 +59,26 @@
             <td class="text-nowrap">{{ $r->created_at->format('d M Y H:i') }}</td>
             <td>{{ $r->tower?->name }}</td>
             <td>{{ $r->vendor_department }}</td>
+
+            {{-- KEGIATAN --}}
+            <td class="text-nowrap">
+              @php
+                $act = match($r->activity ?? 'install_baru'){
+                  'dismantle' => 'Dismantle',
+                  'perbaikan' => 'Perbaikan',
+                  default => 'Install Baru'
+                };
+              @endphp
+              <span class="badge text-bg-light">{{ $act }}</span>
+            </td>
+
+            {{-- PERANGKAT --}}
             <td>{{ $r->device_name }}</td>
-            <td>STACK {{ $r->stack_no }}</td>
+
+            {{-- STACK --}}
+            <td class="text-nowrap">STACK {{ $r->stack_no }}</td>
+
+            {{-- FOTO --}}
             <td class="text-nowrap">
               @if($r->device_photo_path)
                 <a class="btn btn-outline-primary btn-sm" target="_blank"
@@ -69,6 +87,8 @@
                 <span class="text-muted small">-</span>
               @endif
             </td>
+
+            {{-- STATUS --}}
             <td class="text-nowrap">
               @php
                 $badge = match($r->status){
@@ -83,6 +103,7 @@
               @endif
             </td>
 
+            {{-- AKSI --}}
             <td>
               <form class="d-flex flex-column gap-2"
                     method="POST"
@@ -104,7 +125,7 @@
           </tr>
         @empty
           <tr>
-            <td colspan="8" class="text-center text-muted py-4">Tidak ada data.</td>
+            <td colspan="9" class="text-center text-muted py-4">Tidak ada data.</td>
           </tr>
         @endforelse
         </tbody>

@@ -26,67 +26,64 @@ class InstallationReviewController extends Controller
         return view('admin.installations.index', compact('requests', 'status'));
     }
 
- public function update(Request $request, InstallationRequest $installation)
-{
-    $data = $request->validate([
-        'status' => ['required', 'in:approved,rejected'],
-        'admin_comment' => ['nullable', 'string', 'max:2000'],
-    ]);
+    public function update(Request $request, InstallationRequest $installation)
+    {
+        $data = $request->validate([
+            'status' => ['required', 'in:approved,rejected'],
+            'admin_comment' => ['nullable', 'string', 'max:2000'],
+        ]);
 
-    // Marker log: memastikan method update kepanggil
-    Log::info('Installation update called', [
-        'installation_id' => $installation->id,
-        'incoming_status' => $data['status'],
-        'old_status' => $installation->status,
-        'user_id' => $installation->user_id,
-    ]);
+        Log::info('Installation update called', [
+            'installation_id' => $installation->id,
+            'incoming_status' => $data['status'],
+            'old_status' => $installation->status,
+            'user_id' => $installation->user_id,
+        ]);
 
-    $oldStatus = $installation->status;
+        $oldStatus = $installation->status;
 
-    $installation->update([
-        'status' => $data['status'],
-        'admin_comment' => $data['admin_comment'] ?? null,
-        'reviewed_at' => now(),
-    ]);
+        $installation->update([
+            'status' => $data['status'],
+            'admin_comment' => $data['admin_comment'] ?? null,
+            'reviewed_at' => now(),
+        ]);
 
-    $emailInfo = null;
+        $emailInfo = null;
 
-    // Kirim email hanya jika status berubah
-    if ($oldStatus !== $installation->status) {
-        $installation->loadMissing(['user', 'tower']);
+        if ($oldStatus !== $installation->status) {
+            $installation->loadMissing(['user', 'tower']);
+            $recipient = $installation->user?->email;
 
-        $recipient = $installation->user?->email;
+            if (!empty($recipient)) {
+                try {
+                    Mail::to($recipient)->send(new InstallationStatusMail($installation));
 
-        if (!empty($recipient)) {
-            try {
-                Mail::to($recipient)->send(new InstallationStatusMail($installation));
+                    Log::info('Email sent', [
+                        'to' => $recipient,
+                        'installation_id' => $installation->id,
+                        'status' => $installation->status,
+                    ]);
 
-                Log::info('Email sent', [
-                    'to' => $recipient,
-                    'installation_id' => $installation->id,
-                    'status' => $installation->status,
-                ]);
+                    $emailInfo = "Email terkirim ke {$recipient}.";
+                } catch (\Throwable $e) {
+                    Log::error('Email send failed', [
+                        'to' => $recipient,
+                        'installation_id' => $installation->id,
+                        'status' => $installation->status,
+                        'error' => $e->getMessage(),
+                    ]);
 
-                $emailInfo = "Email terkirim ke {$recipient}.";
-            } catch (\Throwable $e) {
-                Log::error('Email send failed', [
-                    'to' => $recipient,
-                    'installation_id' => $installation->id,
-                    'status' => $installation->status,
-                    'error' => $e->getMessage(),
-                ]);
-
-                $emailInfo = "Email gagal dikirim ke {$recipient} (cek log).";
+                    $emailInfo = "Email gagal dikirim ke {$recipient} (cek log).";
+                }
+            } else {
+                $emailInfo = "Email vendor tidak ditemukan, jadi notifikasi tidak dikirim.";
             }
         } else {
-            $emailInfo = "Email vendor tidak ditemukan, jadi notifikasi tidak dikirim.";
+            $emailInfo = "Status tidak berubah, email tidak dikirim.";
         }
-    } else {
-        $emailInfo = "Status tidak berubah, email tidak dikirim.";
-    }
 
-    return back()->with('success', 'Status pengajuan berhasil diupdate. ' . $emailInfo);
-}
+        return back()->with('success', 'Status pengajuan berhasil diupdate. ' . $emailInfo);
+    }
 
     public function export(Request $request)
     {
@@ -106,10 +103,12 @@ class InstallationReviewController extends Controller
             $out = fopen('php://output', 'w');
             fwrite($out, "\xEF\xBB\xBF");
 
+            // Header kolom CSV (sesuai urutan data row)
             fputcsv($out, [
                 'Tanggal Pengajuan',
                 'Tower',
                 'Vendor/Dept',
+                'Kegiatan',
                 'Perangkat',
                 'Stack',
                 'Status',
@@ -122,10 +121,17 @@ class InstallationReviewController extends Controller
                 foreach ($rows as $r) {
                     $photoUrl = $r->device_photo_path ? asset('storage/' . $r->device_photo_path) : '';
 
+                    $activityLabel = match($r->activity ?? 'install_baru') {
+                        'dismantle' => 'Dismantle',
+                        'perbaikan' => 'Perbaikan',
+                        default => 'Install Baru',
+                    };
+
                     fputcsv($out, [
                         optional($r->created_at)->format('Y-m-d H:i:s'),
                         $r->tower?->name,
                         $r->vendor_department,
+                        $activityLabel,
                         $r->device_name,
                         'STACK ' . $r->stack_no,
                         $r->status,

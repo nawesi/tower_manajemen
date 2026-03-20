@@ -10,7 +10,6 @@ class LoginController extends Controller
 {
     public function show()
     {
-        // pastikan view login kamu ada di: resources/views/auth/login.blade.php
         return view('auth.login');
     }
 
@@ -31,7 +30,34 @@ class LoginController extends Controller
 
         $request->session()->regenerate();
 
-        $role = Auth::user()->role ?? 'vendor';
+        $user = Auth::user();
+
+        // === Cek status akun (aktif/nonaktif) ===
+        if (($user->account_status ?? 'active') !== 'active') {
+            Auth::logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+
+            return back()
+                ->withInput()
+                ->withErrors(['username' => 'Akun Anda nonaktif. Hubungi admin.']);
+        }
+
+        // === Cek batas akses (expired) ===
+        $expired = !empty($user->access_expires_at) && $user->access_expires_at->isPast();
+
+        if ($expired) {
+            Auth::logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+
+            return back()
+                ->withInput()
+                ->withErrors(['username' => 'Akun Anda sudah melewati batas akses. Hubungi admin untuk aktifkan kembali.']);
+        }
+
+        // === Redirect berdasarkan role ===
+        $role = $user->role ?? 'vendor';
 
         return $role === 'admin'
             ? redirect()->route('admin.welcome')
@@ -47,8 +73,4 @@ class LoginController extends Controller
 
         return redirect()->route('login');
     }
-
-    
-
-    
 }

@@ -21,53 +21,66 @@
     <div class="table-responsive">
       <table class="table table-striped mb-0 align-middle">
         <thead>
+      <tr>
+        <th>Tanggal</th>
+        <th>Tower</th>
+        <th>Kegiatan</th>
+        <th>Perangkat</th>
+        <th>Stack</th>
+        <th>Status</th>
+        <th>Catatan Admin</th>
+        <th>Foto</th>
+      </tr>
+      </thead>
+
+      <tbody>
+      @forelse($requests as $r)
         <tr>
-          <th>Tanggal</th>
-          <th>Tower</th>
-          <th>Perangkat</th>
-          <th>Stack</th>
-          <th>Status</th>
-          <th>Catatan Admin</th>
-          <th>Foto</th>
+          <td class="text-nowrap">{{ $r->created_at->format('d M Y H:i') }}</td>
+          <td>{{ $r->tower?->name }}</td>
+          <td class="text-nowrap">
+            @php
+              $act = match($r->activity ?? 'install_baru'){
+                'dismantle' => 'Dismantle',
+                'perbaikan' => 'Perbaikan',
+                default => 'Install Baru'
+              };
+            @endphp
+            <span class="badge text-bg-light">{{ $act }}</span>
+          </td>
+          <td>{{ $r->device_name }}</td>
+          <td class="text-nowrap">STACK {{ $r->stack_no }}</td>
+
+          <td class="text-nowrap">
+            @php
+              $badge = match($r->status){
+                'approved' => 'success',
+                'rejected' => 'danger',
+                default => 'warning'
+              };
+            @endphp
+            <span class="badge bg-{{ $badge }}">{{ strtoupper($r->status) }}</span>
+          </td>
+
+          <td style="min-width:260px;">
+            <div class="small text-muted">{{ $r->admin_comment ?? '-' }}</div>
+          </td>
+
+          <td class="text-nowrap">
+            @if($r->device_photo_path)
+              <a class="btn btn-outline-primary btn-sm" target="_blank"
+                href="{{ asset('storage/'.$r->device_photo_path) }}">Lihat</a>
+            @else
+              <span class="text-muted small">-</span>
+            @endif
+          </td>
         </tr>
-        </thead>
-        <tbody>
-        @forelse($requests as $r)
-          <tr>
-            <td class="text-nowrap">{{ $r->created_at->format('d M Y H:i') }}</td>
-            <td>{{ $r->tower?->name }}</td>
-            <td>{{ $r->device_name }}</td>
-            <td>STACK {{ $r->stack_no }}</td>
-            <td class="text-nowrap">
-              @php
-                $badge = match($r->status){
-                  'approved' => 'success',
-                  'rejected' => 'danger',
-                  default => 'warning'
-                };
-              @endphp
-              <span class="badge bg-{{ $badge }}">{{ strtoupper($r->status) }}</span>
-            </td>
-            <td style="min-width:260px;">
-              <div class="small text-muted">
-                {{ $r->admin_comment ?? '-' }}
-              </div>
-            </td>
-            <td class="text-nowrap">
-              @if($r->device_photo_path)
-                <a class="btn btn-outline-primary btn-sm" target="_blank"
-                   href="{{ asset('storage/'.$r->device_photo_path) }}">Lihat</a>
-              @else
-                <span class="text-muted small">-</span>
-              @endif
-            </td>
-          </tr>
-        @empty
-          <tr>
-            <td colspan="7" class="text-center text-muted py-4">Belum ada pengajuan.</td>
-          </tr>
-        @endforelse
-        </tbody>
+      @empty
+        <tr>
+          <td colspan="8" class="text-center text-muted py-4">Belum ada pengajuan.</td>
+        </tr>
+      @endforelse
+      </tbody>
       </table>
     </div>
   </div>
