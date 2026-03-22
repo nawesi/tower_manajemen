@@ -37,8 +37,14 @@ Route::middleware(['auth', 'role:vendor'])->group(function () {
 // ===== ADMIN ROUTES =====
 Route::prefix('admin')->middleware(['auth', 'role:admin'])->group(function () {
 
-    Route::get('/', fn () => view('dashboard.admin'))
-        ->name('admin.welcome');
+Route::get('/', function () {
+    $slides = collect(glob(public_path('images/*.{jpg,jpeg,png,webp}'), GLOB_BRACE))
+        ->map(fn ($p) => 'images/' . basename($p))
+        ->sort()   // urut berdasarkan nama file
+        ->values();
+
+    return view('dashboard.admin', compact('slides'));
+})->name('admin.welcome');
 
     // --- Installations (review + export)
     Route::get('/installations', [InstallationReviewController::class, 'index'])

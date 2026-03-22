@@ -153,15 +153,15 @@
              data-bs-pause="false">
 
           <div class="carousel-inner">
-            <div class="carousel-item active">
-              <img class="carousel-img" src="{{ asset('images/slide1.jpg') }}" alt="Slide 1">
-            </div>
-            <div class="carousel-item">
-              <img class="carousel-img" src="{{ asset('images/slide2.jpg') }}" alt="Slide 2">
-            </div>
-            <div class="carousel-item">
-              <img class="carousel-img" src="{{ asset('images/slide1.jpg') }}" alt="Slide 3">
-            </div>
+            @forelse(($slides ?? []) as $i => $img)
+              <div class="carousel-item {{ $i === 0 ? 'active' : '' }}">
+                <img class="carousel-img" src="{{ asset($img) }}" alt="Slide {{ $i + 1 }}">
+              </div>
+            @empty
+              <div class="carousel-item active">
+                <div class="p-4 text-muted">Tidak ada gambar di folder public/images.</div>
+              </div>
+            @endforelse
           </div>
 
           <button class="carousel-control-prev" type="button" data-bs-target="#welcomeCarousel" data-bs-slide="prev">
